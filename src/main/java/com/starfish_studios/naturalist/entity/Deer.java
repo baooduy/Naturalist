@@ -103,7 +103,7 @@ public class Deer extends AnimalEntity implements IAnimatable {
         }
     }
 
-    private boolean isEating() {
+    public boolean isEating() {
         return this.eatAnimationTick > 0;
     }
 
