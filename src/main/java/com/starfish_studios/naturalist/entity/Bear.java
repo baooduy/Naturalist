@@ -480,7 +480,7 @@ public class Bear extends AnimalEntity implements Angerable, IAnimatable, Sleepi
 
         @Override
         protected void setMobEntityTarget(MobEntity pMob, LivingEntity pTarget) {
-            if (pMob instanceof PolarBearEntity && !pMob.isBaby()) {
+            if (pMob instanceof Bear && !pMob.isBaby()) {
                 super.setMobEntityTarget(pMob, pTarget);
             }
         }
