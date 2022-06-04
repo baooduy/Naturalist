@@ -33,6 +33,7 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.Angerable;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.mob.PathAwareEntity;
+import net.minecraft.entity.mob.SlimeEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -100,7 +101,7 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, Angerable, 
         this.goalSelector.add(6, new LookAroundGoal(this));
         this.targetSelector.add(1, new RevengeGoal(this));
         this.targetSelector.add(2, new ActiveTargetGoal<>(this, PlayerEntity.class, 10, true, false, this::shouldAngerAt));
-        this.targetSelector.add(3, new ActiveTargetGoal<>(this, MobEntity.class, 5, true, false, livingEntity -> livingEntity.getType().isIn(NaturalistTags.EntityTypes.SNAKE_HOSTILES)));
+        this.targetSelector.add(3, new ActiveTargetGoal<>(this, MobEntity.class, 5, true, false, livingEntity -> livingEntity.getType().isIn(NaturalistTags.EntityTypes.SNAKE_HOSTILES) || (livingEntity instanceof SlimeEntity slime && slime.isSmall())));
         this.targetSelector.add(4, new UniversalAngerGoal<>(this, false));
     }
 
@@ -132,7 +133,7 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, Angerable, 
             } else if (chance < 0.15F) {
                 stack = new ItemStack(Items.FEATHER);
             } else if (chance < 0.3F) {
-                stack = new ItemStack(NaturalistItems.SNAIL_SHELL);
+                stack = new ItemStack(Items.RABBIT);
             } else {
                 stack = new ItemStack(Items.CHICKEN);
             }
