@@ -35,6 +35,7 @@ public class NaturalistSoundEvents {
     public static final SoundEvent BIRD_AMBIENT_CARDINAL = registerSoundEvent("bird_ambient_cardinal", () -> new SoundEvent(new Identifier(Naturalist.MOD_ID, "entity.bird.ambient_cardinal")));
     public static final SoundEvent FIREFLY_HURT = registerSoundEvent("firefly_hurt", () -> new SoundEvent(new Identifier(Naturalist.MOD_ID, "entity.firefly.hurt")));
     public static final SoundEvent FIREFLY_DEATH = registerSoundEvent("firefly_death", () -> new SoundEvent(new Identifier(Naturalist.MOD_ID, "entity.firefly.death")));
+    public static final SoundEvent FIREFLY_HIDE = registerSoundEvent("firefly_hide", () -> new SoundEvent(new Identifier(Naturalist.MOD_ID, "entity.firefly.hide")));
 
     private static <T extends SoundEvent> T registerSoundEvent(String name, Supplier<T> soundEvent) {
         return Registry.register(Registry.SOUND_EVENT, new Identifier(Naturalist.MOD_ID, name), soundEvent.get());

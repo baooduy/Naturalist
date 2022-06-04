@@ -3,12 +3,14 @@ package com.starfish_studios.naturalist.entity;
 import com.starfish_studios.naturalist.entity.ai.goal.FlyingWanderGoal;
 import com.starfish_studios.naturalist.registry.NaturalistSoundEvents;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.Flutterer;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.control.FlightMoveControl;
+import net.minecraft.entity.ai.goal.MoveToTargetPosGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.pathing.BirdNavigation;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
@@ -24,13 +26,17 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.particle.BlockStateParticleEffect;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.tag.BlockTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.ServerWorldAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.PlayState;
@@ -44,6 +50,7 @@ import java.util.Random;
 
 public class Firefly extends AnimalEntity implements Flutterer, IAnimatable {
     private static final TrackedData<Integer> GLOW_TICKS_REMAINING = DataTracker.registerData(Firefly.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> SUN_TICKS = DataTracker.registerData(Firefly.class, TrackedDataHandlerRegistry.INTEGER);
     private final AnimationFactory factory = new AnimationFactory(this);
 
     public Firefly(EntityType<? extends AnimalEntity> entityType, World level) {
@@ -86,8 +93,9 @@ public class Firefly extends AnimalEntity implements Flutterer, IAnimatable {
     @Override
     protected void initGoals() {
         super.initGoals();
-        this.goalSelector.add(1, new FlyingWanderGoal(this));
-        this.goalSelector.add(2, new SwimGoal(this));
+        this.goalSelector.add(1, new FireflyHideInGrassGoal(this, 1.2F, 10, 4));
+        this.goalSelector.add(2, new FlyingWanderGoal(this));
+        this.goalSelector.add(3, new SwimGoal(this));
     }
 
     public static DefaultAttributeContainer.Builder createAttributes() {
@@ -113,6 +121,7 @@ public class Firefly extends AnimalEntity implements Flutterer, IAnimatable {
     protected void initDataTracker() {
         super.initDataTracker();
         this.dataTracker.startTracking(GLOW_TICKS_REMAINING, 0);
+        this.dataTracker.startTracking(SUN_TICKS, 0);
     }
 
     public boolean isTailGlowing() {
@@ -127,6 +136,14 @@ public class Firefly extends AnimalEntity implements Flutterer, IAnimatable {
         this.dataTracker.set(GLOW_TICKS_REMAINING, ticks);
     }
 
+    public int getSunTicks() {
+        return this.dataTracker.get(SUN_TICKS);
+    }
+
+    private void setSunTicks(int ticks) {
+        this.dataTracker.set(SUN_TICKS, ticks);
+    }
+
     @Override
     public void tickMovement() {
         super.tickMovement();
@@ -138,8 +155,22 @@ public class Firefly extends AnimalEntity implements Flutterer, IAnimatable {
             if (this.random.nextFloat() <= 0.01 && !this.isTailGlowing()) {
                 this.setGlowTicks(40 + this.random.nextInt(20));
             }
-        } else if (this.isAffectedByDaylight()) {
-            this.setOnFireFor(8);
+        }
+        if (this.isAffectedByDaylight()) {
+            this.setSunTicks(this.getSunTicks() + 1);
+            if (this.getSunTicks() > 600) {
+                BlockPos pos = this.getBlockPos();
+                if (!world.isClient) {
+                    for(int i = 0; i < 20; ++i) {
+                        double x = random.nextGaussian() * 0.02D;
+                        double y = random.nextGaussian() * 0.02D;
+                        double z = random.nextGaussian() * 0.02D;
+                        ((ServerWorld)world).spawnParticles(ParticleTypes.POOF, pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, 1, x, y, z, 0.15F);
+                    }
+                }
+                world.playSound(null, this.getBlockPos(), NaturalistSoundEvents.FIREFLY_HIDE, SoundCategory.NEUTRAL, 0.7F, 0.9F + world.random.nextFloat() * 0.2F);
+                this.discard();
+            }
         }
     }
 
@@ -153,16 +184,9 @@ public class Firefly extends AnimalEntity implements Flutterer, IAnimatable {
     @Override
     protected boolean isAffectedByDaylight() {
         if (this.world.isDay() && !this.hasCustomName() && !this.world.isClient) {
-            float brightness = this.getBrightnessAtEyes();
-            BlockPos pos = new BlockPos(this.getX(), this.getEyeY(), this.getZ());
-            return brightness > 0.5F && this.random.nextFloat() * 30.0F < (brightness - 0.4F) * 2.0F && this.world.isSkyVisible(pos);
+            return this.getBrightnessAtEyes() > 0.5F;
         }
 
-        return false;
-    }
-
-    @Override
-    public boolean isOnFire() {
         return false;
     }
 
@@ -208,4 +232,40 @@ public class Firefly extends AnimalEntity implements Flutterer, IAnimatable {
         return factory;
     }
 
+    static class FireflyHideInGrassGoal extends MoveToTargetPosGoal {
+        private final Firefly firefly;
+
+        public FireflyHideInGrassGoal(Firefly pMob, double pSpeedModifier, int pSearchRange, int pVerticalSearchRange) {
+            super(pMob, pSpeedModifier, pSearchRange, pVerticalSearchRange);
+            this.firefly = pMob;
+        }
+
+        @Override
+        public boolean canStart() {
+            return firefly.isAffectedByDaylight() && super.canStart();
+        }
+
+        @Override
+        protected boolean isTargetPos(WorldView pLevel, BlockPos pPos) {
+            return pLevel.getBlockState(pPos).isOf(Blocks.GRASS) || pLevel.getBlockState(pPos).isOf(Blocks.FERN) || pLevel.getBlockState(pPos).isOf(Blocks.TALL_GRASS);
+        }
+
+        @Override
+        public void tick() {
+            super.tick();
+            World level = firefly.world;
+            if (this.hasReached()) {
+                if (!level.isClient) {
+                    ((ServerWorld)level).spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, Blocks.GRASS.getDefaultState()), firefly.getX(), firefly.getY(), firefly.getZ(), 50, firefly.getWidth() / 4.0F, firefly.getHeight() / 4.0F, firefly.getWidth() / 4.0F, 0.05D);
+                }
+                level.playSound(null, firefly.getBlockPos(), NaturalistSoundEvents.FIREFLY_HIDE, SoundCategory.NEUTRAL, 0.7F, 0.9F + level.random.nextFloat() * 0.2F);
+                firefly.discard();
+            }
+        }
+
+        @Override
+        protected BlockPos getTargetPos() {
+            return this.targetPos;
+        }
+    }
 }
