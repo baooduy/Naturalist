@@ -2,6 +2,7 @@ package com.starfish_studios.naturalist.entity;
 
 import com.starfish_studios.naturalist.entity.ai.goal.AlertOthersPanicGoal;
 import com.starfish_studios.naturalist.registry.NaturalistEntityTypes;
+import com.starfish_studios.naturalist.registry.NaturalistTags;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.goal.AnimalMateGoal;
 import net.minecraft.entity.ai.goal.EatGrassGoal;
@@ -69,7 +70,7 @@ public class Deer extends AnimalEntity implements IAnimatable {
         this.goalSelector.add(3, new TemptGoal(this, 1.25D, Ingredient.ofItems(Items.APPLE), true));
         this.goalSelector.add(4, new FleeEntityGoal<>(this, PlayerEntity.class, 8.0F, 1.5D, 2.0D, livingEntity -> EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR.test(livingEntity) && !livingEntity.isSneaky()));
         this.goalSelector.add(4, new FleeEntityGoal<>(this, HostileEntity.class, 4.0F, 1.5D, 2.0D));
-        this.goalSelector.add(4, new FleeEntityGoal<>(this, Bear.class, 10.0F, 1.5D, 2.0D));
+        this.goalSelector.add(4, new FleeEntityGoal<>(this, AnimalEntity.class, 10.0F, 1.5D, 2.0D, livingEntity -> livingEntity.getType().isIn(NaturalistTags.EntityTypes.DEER_PREDATORS)));
         this.goalSelector.add(5, new FollowParentGoal(this, 1.25D));
         this.eatBlockGoal = new EatGrassGoal(this);
         this.goalSelector.add(6, this.eatBlockGoal);
